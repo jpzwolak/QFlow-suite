@@ -4,7 +4,7 @@ For more details about the project, pease refer to the Project description docum
 
 #### I. Software dependencies: 
 + Python 3.5 (Python 3.6 gives a warning `~/lib/python3.6/importlib/_bootstrap.py:219: RuntimeWarning: compiletime version 3.5 of module 'tensorflow.python.framework.fast_tensor_util' does not match runtime version 3.6` but it does not affect the accuracy or performance)
-+ Tensorflow 1.6 ([www.tensorflow.org](https://www.tensorflow.org/install/))
++ Tensorflow 1.6 ([www.tensorflow.org](https://www.tensorflow.org/install/)) [installed in virtual enviroment]
 + Jupyter ([jupyter.readthedocs.io](http://jupyter.readthedocs.io/en/latest/install.html))
 
 
