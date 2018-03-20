@@ -41,7 +41,7 @@ The QFlow lite repository contains the following files:
 
 #### III. Training data
 
-Data neded for trainig can be foun at (https://doi.org/10.18434/T4/1423788). The `data.zip` folder contains a `data_structure.pdf` file, `license.pdf`, a copy of the `project_description.pdf` file and `raw_data` folder with the training data (1001 raw NumPy files storing the simulated 5-gate devices information). 
+Data neded for trainig can be found at (https://doi.org/10.18434/T4/1423788). The `data.zip` folder contains a `data_structure.pdf` file, `license.pdf`, a copy of the `project_description.pdf` file and `raw_data` folder with the training data (1001 raw NumPy files storing the simulated 5-gate devices information). 
 
 
 #### IV. Typical workflow:
