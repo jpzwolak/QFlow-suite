@@ -102,3 +102,5 @@ ENV/
 
 .DS_Store
 raw_data.zip
+*.npy
+*.DS_Store
