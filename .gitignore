@@ -104,3 +104,10 @@ ENV/
 raw_data.zip
 *.npy
 *.DS_Store
+*.index
+*.data-00000-of-00001
+*.pbtxt
+*.gov
+Data/trained_model/model.ckpt-1.meta
+*.meta
+Data/trained_model/checkpoint

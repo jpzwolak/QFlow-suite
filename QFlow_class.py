@@ -196,7 +196,7 @@ class QFlow():
         else:
             dot_dat = load_dat['current_map']
             dot_lab = np.round(load_dat['label'],2)
-        return dot_dat, dot_lab, i  
+        return dot_dat, dot_lab 
         
     def data_preview(self):
         """
