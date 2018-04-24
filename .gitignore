@@ -111,3 +111,4 @@ raw_data.zip
 Data/trained_model/model.ckpt-1.meta
 *.meta
 Data/trained_model/checkpoint
+Data/trained_model.zip
