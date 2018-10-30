@@ -44,7 +44,12 @@ The QFlow lite repository contains the following files:
 Data neded for trainig can be found at (https://doi.org/10.18434/T4/1423788). The `data.zip` folder contains a `data_structure.pdf` file, `license.pdf`, a copy of the `project_description.pdf` file and `raw_data` folder with the training data (1001 raw NumPy files storing the simulated 5-gate devices information). 
 
 
-#### IV. Typical workflow:
+#### IV. Getting your data ready
+
+In order to use the trained network with your data you need to convert it to a format compatible with the `cnn_model_fn`. The data needs to be stored as a 30 x 30 NumPy array (`*.npy`) and include enough features to make the distinction between single and double dot possible. See the Jupiter notebook for examples of good images. Moreover, since the network is trained to recognize the features qualitatively (and not quantitatively), the data need to be rescaled. The scaling factor has to be fitted heuristically and should be fixed for a given device. In our case, we multiplied the experimental data by a constant factor of `1e2`.
+
+
+#### V. Typical workflow:
 
 Execute the following steps within the QFlow training.ipynb
 
@@ -52,5 +57,5 @@ Execute the following steps within the QFlow training.ipynb
 + **Step 2:** Train CNN 
 + **Step 3:** Test CNN on training set
 + **Step 4:** Test CNN on experimental data provided with the package
-+ **Step 5:** (optional): Prepare your own data following Sec. III Getting your data ready and test CNN on it.
++ **Step 5:** (optional): Prepare your own data following Sec. IV Getting your data ready and test CNN on it.
 
