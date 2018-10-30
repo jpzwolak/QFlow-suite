@@ -326,7 +326,7 @@ class QFlow():
         train_data, train_labels = self.get_data()[:2]
         print("Training samples :", len(train_labels))
         # Set up logging for predictions
-        tensors_to_log = {}#"probabilities": "softmax_tensor"}
+        tensors_to_log = {}
         logging_hook = tf.train.LoggingTensorHook(tensors=tensors_to_log, every_n_iter=50)
         # Train the model
         train_input_fn = tf.estimator.inputs.numpy_input_fn(
@@ -357,7 +357,6 @@ class QFlow():
             shuffle=False)
     
         eval_results = classifier.evaluate(input_fn=eval_input_fn)
-        #np.save(os.path.join("Data/models/trained_model"+str(i)+"/evaluation_data"), eval_labels)#delete later
         np.save('Data/evaluation_data', eval_labels)
         print("Evaluation:", eval_results)
     
@@ -367,16 +366,12 @@ class QFlow():
             shuffle=False)
 
         predictions = list(classifier.predict(input_fn=predict_input_fn))
-        #np.save(os.path.join("Data/models/trained_model"+str(i)+"/predictions_data"), predictions)
         np.save('Data/predictions_data', predictions)
         
     def evaluation_visual(self, i=""):
         """
         Generates a histogram of actual and predicted labels for the test set of simulated data
         """
-        #evals=np.load(os.path.join("Data/models/trained_model"+str(i)+"/evaluation_data.npy"))
-        #preds=np.load(os.path.join("Data/models/trained_model"+str(i)+"/predictions_data.npy"))
-        
         evals=np.load(os.path.join("Data/evaluation_data.npy"))
         preds=np.load(os.path.join("Data/predictions_data.npy"))
 
@@ -389,11 +384,11 @@ class QFlow():
             vec_preds.append(preds[i]["state"])
     
         data = np.vstack([vec_true, vec_preds]).T
-        ind = np.arange(4) #5 for 4 labels
+        ind = np.arange(4) 
 
         plt.hist(data, ind, alpha=0.7, label=['true', 'preds'])
         plt.legend(loc='upper left')
-        plt.xticks(ind+0.5, ('none', 'SD','DD')) #('SC', 'QPC', 'SD','DD') for 4 labels
+        plt.xticks(ind+0.5, ('none', 'SD','DD')) 
         plt.show()
         
     def get_exp_data(self, scaling, f=PATH_EXP): 
@@ -411,9 +406,9 @@ class QFlow():
         for file in files:
             data_dict = np.load(file).item()
             states += [os.path.basename(file)[:2]]
-            inp += [data_dict[self.DATA_MAP]*scaling] # generates a list of arrays   
+            inp += [data_dict[self.DATA_MAP]*scaling] 
         
-        inp = np.array(inp) # converts the list to np.array
+        inp = np.array(inp) 
         n_test = inp.shape[0]
         test_data = inp.reshape(n_test,-1)
 
