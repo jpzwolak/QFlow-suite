@@ -111,3 +111,5 @@ Data/trained_model/model.ckpt-1.meta
 *.meta
 Data/trained_model/checkpoint
 Data/trained_model.zip
+Data/sub_images/20171118-123151236063_30_subimage_4.npy
+*.npy
