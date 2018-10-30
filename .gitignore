@@ -115,3 +115,4 @@ Data/sub_images/20171118-123151236063_30_subimage_4.npy
 *.npy
 *.local
 Data/sub_images_csv.zip
+*.csv
