@@ -9,9 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Last updated: March 16, 2018
+# Last updated: April 4, 2018
 # by Justyna P. Zwolak
-# Info: modified the preview function
+# Info: added the progress bar
 # Total time to generate 10 subregions per each data set: 489.3 s on 2017 MacBook Pro
 # ==============================================================================
 
@@ -37,10 +37,32 @@ class QFlow():
     PATH_RAW = 'Data/raw_data/' # data will be extracted to this folder
     PATH_SUB = 'Data/sub_images/' # subimages will be stored in this folder
     PATH_EXP = 'Data/exp_data/' # experimental data is stored in this folder
-    
-    EXCL_RANGE = 0 # margin to be excluded when generating subregions
-    NUM_OF_SUBS = 10 # the number of subimages per image
-    
+    PATH_DATA = os.path.join(os.getcwd().replace("Code","Data")) # give a path to where the raw_data.zip file is
+    # if the raw_data.zip file is in the same folder as QFlow training use 
+    #PATH_DATA = os.getcwd()
+
+    EXCL_RANGE = 10 # margin to be excluded when generating subregions, usually set to 0, bigger for the 250x250 maps
+        
+    def data_selection(self):
+        """
+        Allows user to specify which data to work with and the subregion size
+        """
+
+        var_s = eval(input('Please choose: \
+                         \n\t1 for working with current data \
+                         \n\t2 for working with sensor data. \
+                         \nYour choice: '))
+        
+        if var_s == 1: 
+            self.DATA_MAP = 'current_map'
+        elif var_s == 2:
+            self.DATA_MAP = 'sensor_map'
+        
+        print("You chose to work with the", self.DATA_MAP.replace('_', ' ')+'.')
+        
+        self.SUB_SIZE = int(input('Please, specify the size of the subregions:'))
+        self.NUM_OF_SUBS = int(input('Please, specify the number of subrigon to generate per full map: '))
+        
     def create_folder(self, f=FOLDER):
         """
         Creates a folder FOLDER unless it exists 
@@ -79,7 +101,7 @@ class QFlow():
         if cur_iter == tot_iter: 
             print()
     
-    def unzip_data(self, path_data, f=FOLDER):
+    def unzip_data(self, path_data=PATH_DATA, f=FOLDER):
         """
         Unzips the raw data
         Args:
@@ -93,38 +115,70 @@ class QFlow():
                 zip_ref.extract(zip_ref.namelist()[i],f)
                 self.progress_bar(i + 1, noi, bar_len = 50)
         print('raw_data.zip is now extracted')
-                  
+
     def extract_info(self, x, info='current'):
         """
         Extracts information of single type from raw files and stores as a numpy array
         Args:
             x = raw data
             info = refers to data that needs to be extracted (Str)
-                   possible values: 'current', 'state', 'charge'
+                   possible values: 'current', 'state', 'charge', 'sensor'
         """
-        data = np.array([np.sum(x['output'][i][info]) for i in range(len(x['output']))])
+        data = np.array([x['output'][i][info] for i in range(len(x['output']))])
         return data
     
-    def extract_full(self, x, size=100):
+    def extract_full(self, x):
         """
-        Creates dictionary with data for a full region
+        Creates dicionary with data for a full region
         Args:
             x = raw data
-            size = the size of NumPy array for full region (Int)
         """
-        keys = ('current_map','state_map','net_charge_map')
-        objects = ('current', 'state', 'charge')
-        values = [self.extract_info(x, el).reshape((size,size)) for el in objects]
+        keys = ('current_map', 'state_map', 'charge_map', 'sensor_data')
+        objects = ('current', 'state', 'charge', 'sensor')
+        values = [self.extract_info(x, el) for el in objects]
         data = dict(zip(keys, values))
         return data
     
+    def size_full(self, x):
+        """
+        Retrives the size of the data
+        Args:
+            x = dictionary with extracted data
+        """
+        return len(x['V_P1_vec'])
+    
+    def range_full(self, x):
+        """
+        Retrives the voltage range from the data
+        Args:
+            x = dictionary with extracted data
+        """
+        return min(x['V_P1_vec']), max(x['V_P1_vec'])
+ 
+    def reshape_full(self, x, size):
+        """
+        Reshapes the data to the desired format, finds net charge for the 'charge_map' and gradient for 
+        sensor (currently dG_1/dP_1; for dG_2 use [:,:,1], for dP_2 use [0])
+        Args:
+            x = dictionary with extracted data
+            size = the size of NumPy array for full region (Int)
+        """
+        data = {}
+        data['current_map'] = x['current_map'].reshape(size,size)
+        data['state_map'] = x['state_map'].reshape(size,size)
+        #flatenning labels
+        data['state_map'][data['state_map'] <= 0] = 0
+        data['net_charge_map'] = np.array(list(map(sum,x['charge_map']))).reshape(size,size)
+        data['sensor_map'] = np.gradient(x['sensor_data'].reshape(size,size,-1)[:,:,0])[1]
+        return data
+
     def prob_vec(self, x):
         """
         Finds the label for subregions
         Args:
             x = dictionary with subregion data
         """
-        dist = np.histogram(x['state_map'],[-1,0,1,2,3])[0]
+        dist = np.histogram(x['state_map'],[0,1,2,3])[0] #when using 4 lables as for current in need [-1,0,1,2,3]
         prob = dist/np.sum(dist)
         return prob
     
@@ -137,45 +191,51 @@ class QFlow():
         x['label'] = self.prob_vec(x)
         return x
     
-    def subimages(self, x, file, sub_size, n=NUM_OF_SUBS, excl_range=EXCL_RANGE, f=PATH_SUB):
+    def subimages(self, x, file, size, r_min, r_max, excl_range=EXCL_RANGE, f=PATH_SUB):
         """
-        Generates subregions
+        Generates subregions while keeping track of the plungers ranges
         Args:
             x = dictionary with full size data
             excl_range = margin to be excluded when generating subregions (Int)
-            sub_size = subregion size (Int)
             n = number of subimages per image (Int)
             f = path to a folder where subregion data will be stored (Str)
         """
         self.create_folder(f)
-        for num in range(n):
-            x0,y0 =  random.sample(range(excl_range,100-sub_size-excl_range), 2)
+        for num in range(int(self.NUM_OF_SUBS)):
+            x0,y0 =  random.sample(range(int(excl_range),int(size-self.SUB_SIZE-excl_range)), 2)
             keys = x.keys()
-            values = [x[key][x0 : x0 + sub_size, y0 : y0 + sub_size] for key in keys]
-            data = dict(zip(keys, values))
+            values = [x[key][x0 : x0 + self.SUB_SIZE, y0 : y0 + self.SUB_SIZE] for key in keys]
+            data = dict(zip(keys, values))    
+            data['V_P1'] = np.linspace(r_min,r_max,size)[x0 : x0 + self.SUB_SIZE]
+            data['V_P2'] = np.linspace(r_min,r_max,size)[y0 : y0 + self.SUB_SIZE]
             self.data_label(data)
-            np.save(f+os.path.basename(file)[:-4]+"_"+str(sub_size)+"_subimage_"+ str(num),data)
-        
-    def slice_data(self, path_data, sub_size, f=PATH_RAW):
+            np.save(f+os.path.basename(file)[:-4]+"_"+str(self.SUB_SIZE)+"_subimage_"+ str(num),data)
+            
+    def slice_data(self, path_data=PATH_DATA, f=PATH_RAW):
         """
         Creating data set for machine learning (once the subregions are ready, the raw data is deleted)
         Args:
             f = path to raw data (Str)
         """
-        print(os.path.exists(os.path.join(path_data,'raw_data/')))
-        if os.path.exists(os.path.join(path_data,'raw_data/')):
+        if os.path.exists(os.path.join(path_data,'Data/sub_images/')):
+            print('Subregions are ready')
+            return
+        elif os.path.exists(os.path.join(path_data,'raw_data/')):
             print('raw_data is already extracted')
             f = os.path.join(path_data,'raw_data/')
         else:
             self.unzip_data(path_data)            
         files = glob.glob(f + "*.npy")
         noi = len(files)
+        size = self.size_full(np.load(files[0]).item())
+        r_min, r_max = self.range_full(np.load(files[0]).item())  
         print('Generating subregions')
         self.progress_bar(0, noi, bar_len = 50)
         for i, file in enumerate(files):
             dat = np.load(file).item()
             dat = self.extract_full(dat)
-            dat = self.subimages(dat, file, sub_size)
+            dat = self.reshape_full(dat, size)
+            dat = self.subimages(dat, file, size, self.SUB_SIZE, r_min, r_max)
             self.progress_bar(i + 1, noi, bar_len = 50)
         print('Done generating subregions')
         self.remove_folder()
@@ -190,13 +250,13 @@ class QFlow():
         files = glob.glob(f + "*.npy")
         i = np.random.randint(int(len(files)/2))
         load_dat = np.load(files[i]).item()
-        while load_dat['label'][n+1] < 0.95:
+        while load_dat['label'][n] < 0.95: 
             i += 1
             load_dat = np.load(files[i]).item()
         else:
-            dot_dat = load_dat['current_map']
+            dot_dat = load_dat[self.DATA_MAP]
             dot_lab = np.round(load_dat['label'],2)
-        return dot_dat, dot_lab 
+        return dot_dat, dot_lab  
         
     def data_preview(self):
         """
@@ -206,7 +266,10 @@ class QFlow():
         dd_dat, dd_lab = self.dot_search(2)
         plt.figure(1,figsize=(12,4))
         
-        scaling = 10**4
+        if self.DATA_MAP == 'current_map':
+            scaling = 10**4
+        else:
+            scaling = 1
 
         plt.subplot(121)
         plt.pcolor(scaling*sd_dat)
@@ -228,11 +291,15 @@ class QFlow():
         files = glob.glob(f + "*.npy")
         inp = []
         oup = []
-        scaling = 10**4
+        
+        if self.DATA_MAP == 'current_map':
+            scaling = 10**4
+        else:
+            scaling = 1
 
         for file in files:
             data_dict = np.load(file).item()
-            inp += [data_dict['current_map']*scaling] # generates a list of arrays
+            inp += [data_dict[self.DATA_MAP]*scaling] # generates a list of arrays
             oup += [data_dict['label']] # generates a list of arrays
         
         inp = np.array(inp) # converts the list to np.array
@@ -274,7 +341,7 @@ class QFlow():
             steps=steps,
             hooks=[logging_hook])
     
-    def eval_net(self, classifier):
+    def eval_net(self, classifier, i=""):
         """
         Evaluates the network
         Args:
@@ -290,6 +357,7 @@ class QFlow():
             shuffle=False)
     
         eval_results = classifier.evaluate(input_fn=eval_input_fn)
+        #np.save(os.path.join("Data/models/trained_model"+str(i)+"/evaluation_data"), eval_labels)#delete later
         np.save('Data/evaluation_data', eval_labels)
         print("Evaluation:", eval_results)
     
@@ -299,15 +367,20 @@ class QFlow():
             shuffle=False)
 
         predictions = list(classifier.predict(input_fn=predict_input_fn))
+        #np.save(os.path.join("Data/models/trained_model"+str(i)+"/predictions_data"), predictions)
         np.save('Data/predictions_data', predictions)
         
-    def evaluation_visual(self):
+    def evaluation_visual(self, i=""):
         """
         Generates a histogram of actual and predicted labels for the test set of simulated data
         """
-        evals=np.load("Data/evaluation_data.npy")
-        preds=np.load("Data/predictions_data.npy")
+        #evals=np.load(os.path.join("Data/models/trained_model"+str(i)+"/evaluation_data.npy"))
+        #preds=np.load(os.path.join("Data/models/trained_model"+str(i)+"/predictions_data.npy"))
+        
+        evals=np.load(os.path.join("Data/evaluation_data.npy"))
+        preds=np.load(os.path.join("Data/predictions_data.npy"))
 
+        
         sess = tf.Session()
         vec_true = sess.run(tf.argmax(input=evals, axis=1))
 
@@ -316,17 +389,19 @@ class QFlow():
             vec_preds.append(preds[i]["state"])
     
         data = np.vstack([vec_true, vec_preds]).T
-        ind = np.arange(5)
+        ind = np.arange(4) #5 for 4 labels
 
         plt.hist(data, ind, alpha=0.7, label=['true', 'preds'])
         plt.legend(loc='upper left')
-        plt.xticks(ind+0.5, ('SC', 'QPC', 'SD','DD'))
+        plt.xticks(ind+0.5, ('none', 'SD','DD')) #('SC', 'QPC', 'SD','DD') for 4 labels
         plt.show()
         
-    def get_exp_data(self, scaling, f=PATH_EXP):
+    def get_exp_data(self, scaling, f=PATH_EXP): 
         """
         Reads in the subregion data and converts it to a format useful for learning with cnn_model_fn
         Args:
+            scaling = factor used to rescale the experimental data to the right range (Int)
+            data_map = defines what data to use (Str)
             f = path to experimental data (Str)
         """
         files = glob.glob(f + "*.npy")
@@ -336,7 +411,7 @@ class QFlow():
         for file in files:
             data_dict = np.load(file).item()
             states += [os.path.basename(file)[:2]]
-            inp += [data_dict['current_map']*scaling] # generates a list of arrays   
+            inp += [data_dict[self.DATA_MAP]*scaling] # generates a list of arrays   
         
         inp = np.array(inp) # converts the list to np.array
         n_test = inp.shape[0]
@@ -351,36 +426,43 @@ class QFlow():
             scaling = a scaling factor to bring the data within a range consistent with the training data set
             classifier = estimator for model training
         """
-        exp_data, exp_labels = self.get_exp_data(scaling)
+        if self.DATA_MAP == "sensor_map":
+            print("There is no experimental sensor data to evaluate at this point")
+            return
+        else:
+            exp_data, exp_labels = self.get_exp_data(scaling)
     
-        predict_input_fn = tf.estimator.inputs.numpy_input_fn(
-            x={"x": exp_data},
-            num_epochs=1,
-            shuffle=False)
+            predict_input_fn = tf.estimator.inputs.numpy_input_fn(
+                x={"x": exp_data},
+                num_epochs=1,
+                shuffle=False)
         
-        return list(classifier.predict(input_fn=predict_input_fn))
+            return list(classifier.predict(input_fn=predict_input_fn))
     
     def exp_visual(self, exp_preds, f=PATH_EXP):
         """
         Args:
             f = path to experimental data (Str)
         """
-        files = glob.glob(f + "*.npy")
+        if self.DATA_MAP == "sensor_map":
+            return
+        else:
+            files = glob.glob(f + "*.npy")
         
-        for i in range(len(files)):
-            load_dat = np.load(files[i]).item()
-            exp_lab= np.round(exp_preds[i]['probabilities'],2)
-            if exp_preds[i]['state'] == 3:
-                exp_state = 'double dot'
-            elif exp_preds[i]['state'] == 2:
-                exp_state = 'sinlge dot'
-            elif exp_preds[i]['state'] == 1:
-                exp_state = 'barrier'
-            else:
-                exp_state = 'short circuit'
+            for i in range(len(files)):
+                load_dat = np.load(files[i]).item()
+                exp_lab= np.round(exp_preds[i]['probabilities'],2)
+                if exp_preds[i]['state'] == 3:
+                    exp_state = 'double dot'
+                elif exp_preds[i]['state'] == 2:
+                    exp_state = 'sinlge dot'
+                elif exp_preds[i]['state'] == 1:
+                    exp_state = 'barrier'
+                else:
+                    exp_state = 'short circuit'
                 
-            plt.pcolor(load_dat['current_map'])
-            bar = plt.colorbar() 
-            plt.show()
-            print('This image is classified as a', exp_state + ' (sub-region label: ', str(exp_lab) + ').\n' )
- 
+                plt.pcolor(load_dat['current_map'])
+                bar = plt.colorbar() 
+                plt.show()
+                print('This image is classified as a', exp_state + ' (sub-region label: ', str(exp_lab) + ').\n' )
+     
