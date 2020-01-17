@@ -446,15 +446,15 @@ class QFlow():
         
             for i in range(len(files)):
                 load_dat = np.load(files[i]).item()
-                exp_lab= np.round(exp_preds[i]['probabilities'],2)
-                if exp_preds[i]['state'] == 3:
+                exp_lab = np.round(exp_preds[i]['probabilities'],2)
+                if exp_preds[i]['state'] == 2:
                     exp_state = 'double dot'
-                elif exp_preds[i]['state'] == 2:
-                    exp_state = 'sinlge dot'
                 elif exp_preds[i]['state'] == 1:
-                    exp_state = 'barrier'
-                else:
-                    exp_state = 'short circuit'
+                    exp_state = 'sinlge dot'
+                elif exp_preds[i]['state'] == 0:
+                    exp_state = 'no dot'
+               # else:
+                #    exp_state = 'short circuit'
                 
                 plt.pcolor(load_dat['current_map'])
                 bar = plt.colorbar() 
