@@ -227,12 +227,12 @@ class QFlow():
             self.unzip_data(path_data)            
         files = glob.glob(f + "*.npy")
         noi = len(files)
-        size = self.size_full(np.load(files[0]).item())
-        r_min, r_max = self.range_full(np.load(files[0]).item())  
+        size = self.size_full(np.load(files[0], allow_pickle=True).item())
+        r_min, r_max = self.range_full(np.load(files[0], allow_pickle=True).item())  
         print('Generating subregions')
         self.progress_bar(0, noi, bar_len = 50)
         for i, file in enumerate(files):
-            dat = np.load(file).item()
+            dat = np.load(file, allow_pickle=True).item()
             dat = self.extract_full(dat)
             dat = self.reshape_full(dat, size)
             dat = self.subimages(dat, file, size, self.SUB_SIZE, r_min, r_max)
@@ -249,10 +249,10 @@ class QFlow():
         """
         files = glob.glob(f + "*.npy")
         i = np.random.randint(int(len(files)/2))
-        load_dat = np.load(files[i]).item()
+        load_dat = np.load(files[i], allow_pickle=True).item()
         while load_dat['label'][n] < 0.95: 
             i += 1
-            load_dat = np.load(files[i]).item()
+            load_dat = np.load(files[i], allow_pickle=True).item()
         else:
             dot_dat = load_dat[self.DATA_MAP]
             dot_lab = np.round(load_dat['label'],2)
@@ -298,7 +298,7 @@ class QFlow():
             scaling = 1
 
         for file in files:
-            data_dict = np.load(file).item()
+            data_dict = np.load(file, allow_pickle=True).item()
             inp += [data_dict[self.DATA_MAP]*scaling] # generates a list of arrays
             oup += [data_dict['label']] # generates a list of arrays
         
@@ -372,8 +372,8 @@ class QFlow():
         """
         Generates a histogram of actual and predicted labels for the test set of simulated data
         """
-        evals=np.load(os.path.join("Data/evaluation_data.npy"))
-        preds=np.load(os.path.join("Data/predictions_data.npy"))
+        evals=np.load(os.path.join("Data/evaluation_data.npy"), allow_pickle=True)
+        preds=np.load(os.path.join("Data/predictions_data.npy"), allow_pickle=True)
 
         
         sess = tf.Session()
@@ -404,7 +404,7 @@ class QFlow():
         states = []
 
         for file in files:
-            data_dict = np.load(file).item()
+            data_dict = np.load(file, allow_pickle=True).item()
             states += [os.path.basename(file)[:2]]
             inp += [data_dict[self.DATA_MAP]*scaling] 
         
@@ -445,7 +445,7 @@ class QFlow():
             files = glob.glob(f + "*.npy")
         
             for i in range(len(files)):
-                load_dat = np.load(files[i]).item()
+                load_dat = np.load(files[i], allow_pickle=True).item()
                 exp_lab = np.round(exp_preds[i]['probabilities'],2)
                 if exp_preds[i]['state'] == 2:
                     exp_state = 'double dot'
@@ -460,4 +460,3 @@ class QFlow():
                 bar = plt.colorbar() 
                 plt.show()
                 print('This image is classified as a', exp_state + ' (sub-region label: ', str(exp_lab) + ').\n' )
-     
