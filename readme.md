@@ -1,4 +1,3 @@
-[]
 This document is intended as a User Guide for anyone interested in training a machine learning (ML) model using the quantum dot dataset available on [data.nist.gov](https://data.nist.gov/od/id/66492819760D3FF6E05324570681BA721894).
 For more details about the project, pease refer to the Project description document.
 
