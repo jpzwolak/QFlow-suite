@@ -89,7 +89,7 @@ class DataCropper():
 
         return data
 
-    def crop_full_dataset(self, h5_filename, data_key='noisy_sensor', 
+    def crop_full_dataset(self, h5_filename, data_key='sensor', 
             x_key='V_P1_vec', y_key='V_P2_vec', subs_per_map=10, save_data=True,
             return_data=False):
         '''
@@ -117,7 +117,7 @@ class DataCropper():
                 for i in range(subs_per_map):
                     data = self.crop_data(
                         v['output'][data_key][()], v['output']['state'][()], 
-                        v[x_key][()], v[y_key][()], v['noise_mag_factor'][()])
+                        v[x_key][()], v[y_key][()], v['noise_level'][()])
 
                     #  create list of cropped data if wanted to save memory
                     cropped_data_dict[k+('%i'%i)] = data
